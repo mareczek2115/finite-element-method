@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import numpy as np
 
 
 @dataclass
@@ -28,6 +29,8 @@ class JacobiMatrix:
 class Element:
     id: list[int]
     jacobi_matrices: list[JacobiMatrix] = field(default_factory=list)
+    H_matrices: list[np.ndarray] = field(default_factory=list)
+    integrated_H_matrix: np.ndarray = field(default_factory=list)
 
 
 @dataclass
