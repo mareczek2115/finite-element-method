@@ -63,6 +63,6 @@ class ElemUniv:
     def __init__(self, points: list[tuple]):
         for point in points:
             self.dN_dxi.append(
-                [-0.25 * (1 - point[1]), 0.25 * (1 - point[1]), 0.25 * (1 + point[1]), -0.25 * (1 + point[1])])
+                [-0.25 * (1 - point[0]), 0.25 * (1 - point[0]), 0.25 * (1 + point[0]), -0.25 * (1 + point[0])])
             self.dN_deta.append(
-                [-0.25 * (1 - point[0]), -0.25 * (1 + point[0]), 0.25 * (1 + point[0]), 0.25 * (1 - point[0])])
+                [-0.25 * (1 - point[1]), -0.25 * (1 + point[1]), 0.25 * (1 + point[1]), 0.25 * (1 - point[1])])
