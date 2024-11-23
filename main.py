@@ -2,19 +2,18 @@ import math
 import sys
 import pandas as pd
 import numpy as np
+from typing import List, Tuple
 
 import structs
 
-data = None
-grid = None
 
+def read_file(file_name: str):
+    """Reads the input file and parses nodes, elements, and field values"""
 
-def read_file(file_name):
     elements, nodes, field_values = [], [], []
     node_lines = element_lines = False
 
     with open(file_name, 'r') as file:
-        field_values = []
         for line in file:
             line_array = [x for x in line.strip().split(" ") if x]
 
@@ -42,46 +41,12 @@ def read_file(file_name):
     return elements, nodes, field_values
 
 
-file_name = sys.argv[1] if len(sys.argv) > 1 else None
+def calculate_H_matrices(grid: structs.Grid, elem_univ: structs.ElemUniv, conductivity: int,
+                         integration_points: List[Tuple[float, float]]):
+    """Calculate H matrices for each element"""
 
-try:
-    if not file_name:
-        raise Exception("Podaj nazwe pliku, z ktorego chcesz odczytac, jako argument")
-
-    elements, nodes, field_values = read_file(file_name)
-
-    data = structs.GlobalData(*field_values[:10])
-    grid = structs.Grid(nN=field_values[-2], nE=field_values[-1], elements=elements, nodes=nodes)
-
-    # for field in data.__dataclass_fields__:
-    #     value = getattr(data, field)
-    #     print(f"""{field}: {value}""")
-    #
-    # print("\n")
-    #
-    # for index, node in enumerate(nodes):
-    #     print(f"""node {index}: {node.x}\t{node.y}""")
-    # #
-    # print("\n")
-    # #
-    # for index, element in enumerate(elements):
-    #     print(f"""element {index}: {element.id}""")
-
-    # integration_points = [(-1 / math.sqrt(3), -1 / math.sqrt(3)), (-1 / math.sqrt(3), 1 / math.sqrt(3)),
-    #                       (1 / math.sqrt(3), 1 / math.sqrt(3)), (1 / math.sqrt(3), -1 / math.sqrt(3))]
-
-    # weights = [[1, 1], [1, 1]]
-
-    integration_points = [(-math.sqrt(3/5), -math.sqrt(3/5)), (0, -math.sqrt(3/5)), (math.sqrt(3/5), -math.sqrt(3/5)),
-                          (-math.sqrt(3/5), 0), (0, 0), (math.sqrt(3/5), 0),
-                          (-math.sqrt(3/5), math.sqrt(3/5)), (0, math.sqrt(3/5)), (math.sqrt(3/5), math.sqrt(3/5))]
-
-    weights = [[5/9, 8/9, 5/9], [5/9, 8/9, 5/9], [5/9, 8/9, 5/9]]
-
-    elem_univ = structs.ElemUniv(integration_points)
-
-    for element in elements:
-        element_nodes_cords = [nodes[element_node - 1] for element_node in element.id]
+    for element in grid.elements:
+        element_nodes_cords = [grid.nodes[element_node - 1] for element_node in element.id]
         x_coords = [node.x for node in element_nodes_cords]
         y_coords = [node.y for node in element_nodes_cords]
 
@@ -100,17 +65,17 @@ try:
                 dN_dx.append(dN_dx_dN_dy_mat[0][0])
                 dN_dy.append(dN_dx_dN_dy_mat[1][0])
 
-            dx_matrix_product = []
-            dy_matrix_product = []
-
-            for k in range(4):
-                dx_matrix_product.append([dN_dx[k] * dN_dx[m] for m in range(4)])
-            for k in range(4):
-                dy_matrix_product.append([dN_dy[k] * dN_dy[m] for m in range(4)])
+            dx_matrix_product = np.outer(dN_dx, dN_dx)
+            dy_matrix_product = np.outer(dN_dy, dN_dy)
 
             element.H_matrices.append(
-                data.conductivity * (np.array(dx_matrix_product) + np.array(dy_matrix_product)) *
+                conductivity * (np.array(dx_matrix_product) + np.array(dy_matrix_product)) *
                 element.jacobi_matrices[j].detJ)
+
+
+def integrate_H_matrices(elements: List[structs.Element], weights: List[List[float]],
+                         integration_points: List[Tuple[float, float]]):
+    """Integrates H matrices for all elements"""
 
     len_1 = int(math.sqrt(len(integration_points)))
     for element in elements:
@@ -119,5 +84,41 @@ try:
             H_matrix += element.H_matrices[k] * weights[i][j] * weights[j][i]
         element.integrated_H_matrix = H_matrix
 
+
+file_name = sys.argv[1] if len(sys.argv) > 1 else None
+
+try:
+    if not file_name:
+        raise FileNotFoundError("Podaj nazwe pliku, z ktorego chcesz odczytac, jako argument")
+
+    elements, nodes, field_values = read_file(file_name)
+
+    data = structs.GlobalData(*field_values[:10])
+    grid = structs.Grid(nN=field_values[-2], nE=field_values[-1], elements=elements, nodes=nodes)
+
+    # integration_points = [(-1 / math.sqrt(3), -1 / math.sqrt(3)), (-1 / math.sqrt(3), 1 / math.sqrt(3)),
+    #                       (1 / math.sqrt(3), 1 / math.sqrt(3)), (1 / math.sqrt(3), -1 / math.sqrt(3))]
+
+    # weights = [[1, 1], [1, 1]]
+
+    integration_points = [(-math.sqrt(3 / 5), -math.sqrt(3 / 5)), (0, -math.sqrt(3 / 5)),
+                          (math.sqrt(3 / 5), -math.sqrt(3 / 5)),
+                          (-math.sqrt(3 / 5), 0), (0, 0), (math.sqrt(3 / 5), 0),
+                          (-math.sqrt(3 / 5), math.sqrt(3 / 5)), (0, math.sqrt(3 / 5)),
+                          (math.sqrt(3 / 5), math.sqrt(3 / 5))]
+
+    weights = [[5 / 9, 8 / 9, 5 / 9],
+               [5 / 9, 8 / 9, 5 / 9],
+               [5 / 9, 8 / 9, 5 / 9]]
+
+    elem_univ = structs.ElemUniv(integration_points)
+
+    calculate_H_matrices(grid, elem_univ, data.conductivity, integration_points)
+    integrate_H_matrices(elements, weights, integration_points)
+
+except ValueError as e:
+    print(f"Value Error: {e}")
+except FileNotFoundError as e:
+    print(f"File Error: {e}")
 except Exception as e:
-    print(e)
+    print(f"Unexpected Error: {e}")
