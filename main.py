@@ -15,16 +15,17 @@ def read_file(file_name: str):
 
     with open(file_name, 'r') as file:
         for line in file:
-            line_array = [x for x in line.strip().split(" ") if x]
 
-            if str(line_array[0]) == '*Node':
+            if line.startswith("*Node"):
                 node_lines = True
                 continue
-            elif str(line_array[0]) == '*Element,':
+            elif line.startswith("*Element,"):
                 node_lines, element_lines = False, True
                 continue
-            elif str(line_array[0]) == '*BC':
+            elif line.startswith("*BC"):
                 break
+
+            line_array = [x for x in line.strip().split(" ") if x]
 
             if element_lines:
                 element = structs.Element([int(val.replace(',', '')) for val in line_array[1:5]])
@@ -43,7 +44,7 @@ def read_file(file_name: str):
 
 def calculate_H_matrices(grid: structs.Grid, elem_univ: structs.ElemUniv, conductivity: int,
                          integration_points: List[Tuple[float, float]]):
-    """Calculate H matrices for each element"""
+    """Calculates H matrices for each element"""
 
     for element in grid.elements:
         element_nodes_cords = [grid.nodes[element_node - 1] for element_node in element.id]
@@ -85,6 +86,16 @@ def integrate_H_matrices(elements: List[structs.Element], weights: List[List[flo
         element.integrated_H_matrix = H_matrix
 
 
+def aggregate_H_matrices(grid: structs.Grid):
+    """Aggregates all H matrices from each element in one matrix for the entire grid"""
+
+    for element in grid.elements:
+        for _, (i, j) in enumerate((i, j) for i in range(4) for j in range(4)):
+            row = element.id[i]
+            column = element.id[j]
+            grid.aggregated_H_matrix[row - 1][column - 1] += element.integrated_H_matrix[i][j]
+
+
 file_name = sys.argv[1] if len(sys.argv) > 1 else None
 
 try:
@@ -115,6 +126,7 @@ try:
 
     calculate_H_matrices(grid, elem_univ, data.conductivity, integration_points)
     integrate_H_matrices(elements, weights, integration_points)
+    aggregate_H_matrices(grid)
 
 except ValueError as e:
     print(f"Value Error: {e}")

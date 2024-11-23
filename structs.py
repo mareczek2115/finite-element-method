@@ -43,6 +43,10 @@ class Grid:
     nE: int
     elements: List[Element]
     nodes: List[Node]
+    aggregated_H_matrix: np.ndarray = field(init=False)
+
+    def __post_init__(self):
+        self.aggregated_H_matrix = np.zeros((self.nN, self.nN))
 
 
 @dataclass
