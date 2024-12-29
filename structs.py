@@ -7,6 +7,7 @@ import numpy as np
 class Node:
     x: float
     y: float
+    BC: bool = False
 
 
 class JacobiMatrix:
@@ -35,6 +36,8 @@ class Element:
     jacobi_matrices: List[JacobiMatrix] = field(default_factory=list)
     H_matrices: List[np.ndarray] = field(default_factory=list)
     integrated_H_matrix: np.ndarray = field(default_factory=lambda: np.zeros((4, 4)))
+    Hbc_matrix: np.ndarray = field(default_factory=lambda: np.zeros((4, 4)))
+    P_vector: np.ndarray = field(default_factory=lambda: np.zeros((4, 1)))
 
 
 @dataclass
@@ -44,9 +47,12 @@ class Grid:
     elements: List[Element]
     nodes: List[Node]
     aggregated_H_matrix: np.ndarray = field(init=False)
+    aggregated_P_vector: np.ndarray = field(init=False)
+    # t_vector: np.ndarray = field(init=False)
 
     def __post_init__(self):
         self.aggregated_H_matrix = np.zeros((self.nN, self.nN))
+        self.aggregated_P_vector = np.zeros((self.nN, 1))
 
 
 @dataclass
