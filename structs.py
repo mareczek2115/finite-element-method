@@ -38,6 +38,29 @@ class Element:
     integrated_H_matrix: np.ndarray = field(default_factory=lambda: np.zeros((4, 4)))
     Hbc_matrix: np.ndarray = field(default_factory=lambda: np.zeros((4, 4)))
     P_vector: np.ndarray = field(default_factory=lambda: np.zeros((4, 1)))
+    C_matrices: List[np.ndarray] = field(default_factory=list)
+    integrated_C_matrix: np.ndarray = field(default_factory=lambda: np.zeros((4, 4)))
+
+    def __post_init__(self):
+        self._data = {
+            "H_matrices": self.H_matrices,
+            "C_matrices": self.C_matrices,
+            "integrated_H_matrix": self.integrated_H_matrix,
+            "integrated_C_matrix": self.integrated_C_matrix,
+        }
+
+    def __getitem__(self, key):
+        if key in self._data:
+            return self._data[key]
+        else:
+            raise KeyError(f"Unknown key: {key}")
+
+    def __setitem__(self, key, value):
+        if key in self._data:
+            self._data[key] = value
+            setattr(self, key, value)
+        else:
+            raise KeyError(f"Unknown key: {key}")
 
 
 @dataclass
@@ -48,11 +71,28 @@ class Grid:
     nodes: List[Node]
     aggregated_H_matrix: np.ndarray = field(init=False)
     aggregated_P_vector: np.ndarray = field(init=False)
-    # t_vector: np.ndarray = field(init=False)
+    aggregated_C_matrix: np.ndarray = field(init=False)
 
     def __post_init__(self):
         self.aggregated_H_matrix = np.zeros((self.nN, self.nN))
         self.aggregated_P_vector = np.zeros((self.nN, 1))
+        self.aggregated_C_matrix = np.zeros((self.nN, self.nN))
+
+    def __getitem__(self, key):
+        if key == 'aggregated_H_matrix':
+            return self.aggregated_H_matrix
+        elif key == 'aggregated_C_matrix':
+            return self.aggregated_C_matrix
+        else:
+            raise KeyError(f"Unknown key: {key}")
+
+    def __setitem__(self, key, value):
+        if key == 'aggregated_H_matrix':
+            self.aggregated_H_matrix = value
+        elif key == 'aggregated_C_matrix':
+            self.aggregated_C_matrix = value
+        else:
+            raise KeyError(f"Unknown key: {key}")
 
 
 @dataclass

@@ -2,9 +2,10 @@ import sys
 import pandas as pd
 
 from structs import GlobalData, Grid, ElemUniv
-from consts import INTEGRATION_POINTS_H, WEIGHTS_H, INTEGRATION_POINTS_HBC, WEIGHTS_HBC
+from consts import INTEGRATION_POINTS_2D, WEIGHTS_2D, INTEGRATION_POINTS_1D, WEIGHTS_1D
 from parse_file import read_file
-from matrix_operations import calculate_H_matrices, integrate_H_matrices, aggregate_H_matrices, calculate_Hbc_matrices
+from matrix_operations import calculate_H_matrices, calculate_Hbc_matrices, calculate_C_matrices, \
+    integrate_matrices, aggregate_matrices
 from vectors import calculate_P_vector, aggregate_P_vectors
 
 
@@ -19,16 +20,20 @@ try:
     data = GlobalData(*field_values[:10])
     grid = Grid(nN=field_values[-2], nE=field_values[-1], elements=elements, nodes=nodes)
 
-    elem_univ = ElemUniv(INTEGRATION_POINTS_H)
+    elem_univ = ElemUniv(INTEGRATION_POINTS_2D)
 
     calculate_H_matrices(grid, elem_univ, data.conductivity)
-    integrate_H_matrices(elements, WEIGHTS_H, INTEGRATION_POINTS_H)
-    aggregate_H_matrices(grid)
+    integrate_matrices(elements, 'H', WEIGHTS_2D, INTEGRATION_POINTS_2D)
+    aggregate_matrices(grid, 'H')
 
-    calculate_Hbc_matrices(data, grid, WEIGHTS_HBC, INTEGRATION_POINTS_HBC)
-    calculate_P_vector(data, grid, WEIGHTS_HBC, INTEGRATION_POINTS_HBC)
+    calculate_Hbc_matrices(data, grid, WEIGHTS_1D, INTEGRATION_POINTS_1D)
+    calculate_P_vector(data, grid, WEIGHTS_1D, INTEGRATION_POINTS_1D)
     aggregate_P_vectors(grid)
 
+    calculate_C_matrices(data, grid, INTEGRATION_POINTS_2D)
+    integrate_matrices(elements, 'C', WEIGHTS_2D, INTEGRATION_POINTS_2D)
+    aggregate_matrices(grid, 'C')
+    print(pd.DataFrame(grid.aggregated_C_matrix))
     # grid.t_vector = -1 * np.linalg.inv(grid.aggregated_H_matrix) * grid.aggregated_P_vector
     # print(pd.DataFrame(grid.t_vector))
 

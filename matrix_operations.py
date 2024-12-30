@@ -1,6 +1,6 @@
 import numpy as np
 import math
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Literal
 from structs import GlobalData, Grid, Element, ElemUniv, JacobiMatrix
 from utils import detect_edges, get_vector_of_shape_functions
 
@@ -75,43 +75,6 @@ def compute_H_matrix(integration_point_index: int, elem_univ: ElemUniv, jacobi_m
     return conductivity * (np.array(dx_matrix_product) + np.array(dy_matrix_product)) * jacobi_matrix.detJ
 
 
-def integrate_H_matrices(elements: List[Element], weights: List[List[float]],
-                         integration_points: List[Tuple[float, float]]) -> None:
-    """
-    Integrates H matrices for all elements
-
-    Args:
-        elements (List[Element]): List of elements in the grid.
-        weights (List[List[float]]): Gaussian quadrature for integration points.
-        integration_points (List[Tuple[float, float]]): List of integration points in 2D surface.
-    """
-
-    num_points = int(math.sqrt(len(integration_points)))
-
-    for element in elements:
-        H_matrix = np.zeros((4, 4))
-        for k, (i, j) in enumerate([(i, j) for i in range(num_points) for j in range(num_points)]):
-            H_matrix += element.H_matrices[k] * weights[i][j] * weights[j][i]
-        element.integrated_H_matrix = H_matrix
-
-
-def aggregate_H_matrices(grid: Grid) -> None:
-    """
-    Aggregates all H matrices from each element in one matrix for the entire grid
-
-    Args:
-        grid (Grid): The grid containing nodes, elements and the global integrated H matrix.
-    """
-
-    for element in grid.elements:
-        element_matrix = element.integrated_H_matrix
-        for i in range(4):
-            for j in range(4):
-                global_row = element.id[i]
-                global_column = element.id[j]
-                grid.aggregated_H_matrix[global_row - 1][global_column - 1] += element_matrix[i][j]
-
-
 def calculate_Hbc_matrices(data: GlobalData, grid: Grid, weights: List[float],
                            integration_points: Dict[str, List[Tuple[float, int]]]) -> None:
     """
@@ -145,3 +108,53 @@ def calculate_Hbc_matrices(data: GlobalData, grid: Grid, weights: List[float],
             Hbc_matrix += data.alfa * edge_matrix * ds
 
         element.Hbc_matrix += Hbc_matrix
+
+
+def calculate_C_matrices(data: GlobalData, grid: Grid, integration_points: List[Tuple[float, float]]) -> None:
+    for element in grid.elements:
+        for index, (xi, eta) in enumerate(integration_points):
+            N_vector = [[0.25 * (1 - xi) * (1 - eta)],
+                        [0.25 * (1 + xi) * (1 - eta)],
+                        [0.25 * (1 + xi) * (1 + eta)],
+                        [0.25 * (1 - xi) * (1 + eta)]]
+            C_matrix = data.density * data.specificHeat * (np.array(N_vector) * np.array(N_vector).T) * \
+                       element.jacobi_matrices[index].detJ
+            element.C_matrices.append(C_matrix)
+
+
+def integrate_matrices(elements: List[Element], matrix_type: Literal['H', 'C'], weights: List[List[float]],
+                       integration_points: List[Tuple[float, float]]) -> None:
+    """
+    Integrates matrices of a given type for all elements in the grid.
+
+    Args:
+        elements (List[Element]): List of elements in the grid.
+        matrix_type (Literal['H', 'C']): Type of the matrix to be integrated.
+        weights (List[List[float]]): Gaussian quadrature for integration points.
+        integration_points (List[Tuple[float, float]]): List of integration points in 2D surface.
+    """
+    num_points = int(math.sqrt(len(integration_points)))
+
+    for element in elements:
+        matrix = np.zeros((4, 4))
+        for k, (i, j) in enumerate([(i, j) for i in range(num_points) for j in range(num_points)]):
+            matrix += element[matrix_type + '_matrices'][k] * weights[i][j] * weights[j][i]
+        element['integrated_' + matrix_type + '_matrix'] = matrix
+
+
+def aggregate_matrices(grid: Grid, matrix_type: Literal['H', 'C']) -> None:
+    """
+    Aggregates all matrices of a given type from each element in one matrix for the entire grid.
+
+    Args:
+        grid (Grid): The grid containing nodes, elements and the global integrated matrix.
+        matrix_type (Literal['H', 'C']): Type of the matrix to be aggregated.
+    """
+
+    for element in grid.elements:
+        element_matrix = element['integrated_' + matrix_type + '_matrix']
+        for i in range(4):
+            for j in range(4):
+                global_row = element.id[i]
+                global_column = element.id[j]
+                grid['aggregated_' + matrix_type + '_matrix'][global_row - 1][global_column - 1] += element_matrix[i][j]

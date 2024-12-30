@@ -6,7 +6,7 @@ This project simulates 2D heat transfer using the Finite Element Method (FEM). I
 
 ## Requirements
 
-- Python 3.x
+- Python 3.8
 - NumPy
 
 ## How to Run
