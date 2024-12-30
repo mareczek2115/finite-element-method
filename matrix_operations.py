@@ -158,3 +158,14 @@ def aggregate_matrices(grid: Grid, matrix_type: Literal['H', 'C']) -> None:
                 global_row = element.id[i]
                 global_column = element.id[j]
                 grid['aggregated_' + matrix_type + '_matrix'][global_row - 1][global_column - 1] += element_matrix[i][j]
+
+
+def sum_H_Hbc(elements: List[Element]) -> None:
+    """
+    Adds Hbc matrix to H matrix in each element in the grid.
+
+    Args:
+         elements (List[Element]): List of the elements in the grid.
+    """
+    for element in elements:
+        element.integrated_H_matrix += element.Hbc_matrix

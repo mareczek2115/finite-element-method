@@ -1,6 +1,7 @@
 import numpy as np
 from typing import List, Tuple
-from structs import Grid
+
+from structs import GlobalData, Grid
 
 
 def detect_edges(grid: Grid, ids: List[int]) -> List[Tuple[Tuple[int, int], str]]:
@@ -57,3 +58,23 @@ def get_vector_of_shape_functions(xi: float, eta: float) -> np.ndarray:
     N4 = 0.25 * (1 + xi) * (1 - eta)
 
     return np.array([[N1], [N2], [N3], [N4]])
+
+
+def simulate_temp(data: GlobalData, grid: Grid) -> None:
+    """
+    Simulates temperature changes over time for the grid.
+
+    Args:
+        data (GlobalData): Global simulation parameters.
+        grid (Grid): Contains the global matrices (C, H) and vector (P) for the simulation.
+    """
+    temperature_vector = np.full((16, 1), data.initialTemp)
+
+    for _ in range(data.simulationStepTime,
+                   data.simulationTime + data.simulationStepTime,
+                   data.simulationStepTime):
+        C_div_tau = grid.aggregated_C_matrix / data.simulationStepTime
+        temperature_vector_next = np.linalg.inv(grid.aggregated_H_matrix + C_div_tau) @ \
+                                  (grid.aggregated_P_vector + C_div_tau @ temperature_vector)
+        print(np.min(temperature_vector_next), np.max(temperature_vector_next))
+        temperature_vector = temperature_vector_next
