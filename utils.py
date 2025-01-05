@@ -1,7 +1,23 @@
 import numpy as np
-from typing import List, Tuple
-
+from typing import List, Tuple, Optional
 from structs import GlobalData, Grid
+
+
+def find_first_zero_position(matrix: np.ndarray) -> Optional[Tuple[int, int]]:
+    """
+    Finds the first (row, column) index of zero in the matrix.
+
+    Args:
+        matrix (np.ndarray): The matrix to search.
+
+    Returns:
+        Optional[Tuple[int, int]]: The index of the first zero, or None if not found.
+    """
+    for i, row in enumerate(matrix):
+        for j, value in enumerate(row):
+            if value == 0:
+                return i, j
+    return None
 
 
 def detect_edges(grid: Grid, ids: List[int]) -> List[Tuple[Tuple[int, int], str]]:
@@ -18,16 +34,30 @@ def detect_edges(grid: Grid, ids: List[int]) -> List[Tuple[Tuple[int, int], str]
     edges = []
     nodes_position = np.zeros((2, 2), int)
 
-    def sort_nodes(nodes, sort_key):
-        return sorted(((grid.nodes[node_id - 1], node_id) for node_id in nodes), key=sort_key)
+    nodes = [(grid.nodes[node_id - 1], node_id) for node_id in ids]
 
-    sorted_nodes_vertically = sort_nodes(ids, lambda item: (item[0].x, item[0].y))
-    sorted_nodes_horizontally = sort_nodes(ids, lambda item: (item[0].x, -item[0].y))
+    min_x = min(node[0].x for node in nodes)
+    max_x = max(node[0].x for node in nodes)
+    min_y = min(node[0].y for node in nodes)
+    max_y = max(node[0].y for node in nodes)
 
-    nodes_position[1][0] = sorted_nodes_vertically[0][1]
-    nodes_position[0][1] = sorted_nodes_vertically[-1][1]
-    nodes_position[0][0] = sorted_nodes_horizontally[0][1]
-    nodes_position[1][1] = sorted_nodes_horizontally[-1][1]
+    for node, node_id in nodes:
+        if node.x == min_x:
+            if node.y == min_y:
+                nodes_position[1][0] = node_id
+            elif node.y == max_y:
+                nodes_position[0][0] = node_id
+        elif node.x == max_x:
+            if node.y == min_y:
+                nodes_position[1][1] = node_id
+            elif node.y == max_y:
+                nodes_position[0][1] = node_id
+
+    for node_id in ids:
+        if node_id not in nodes_position:
+            position = find_first_zero_position(nodes_position)
+            if position:
+                nodes_position[position[0]][position[1]] = node_id
 
     if grid.nodes[nodes_position[0][0] - 1].BC and grid.nodes[nodes_position[0][1] - 1].BC:
         edges.append(((nodes_position[0][0], nodes_position[0][1]), "top"))
@@ -68,7 +98,7 @@ def simulate_temp(data: GlobalData, grid: Grid) -> None:
         data (GlobalData): Global simulation parameters.
         grid (Grid): Contains the global matrices (C, H) and vector (P) for the simulation.
     """
-    temperature_vector = np.full((16, 1), data.initialTemp)
+    temperature_vector = np.full((data.nN, 1), data.initialTemp)
 
     for _ in range(data.simulationStepTime,
                    data.simulationTime + data.simulationStepTime,
