@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from structs import GlobalData, Grid, ElemUniv
-from consts import INTEGRATION_POINTS_2D, WEIGHTS_2D, INTEGRATION_POINTS_1D, WEIGHTS_1D
+from consts import INTEGRATION_SCHEMES
 from parse_file import read_file
 from matrix_operations import calculate_H_matrices, calculate_Hbc_matrices, calculate_C_matrices, \
     integrate_matrices, aggregate_matrices, sum_H_Hbc
@@ -16,6 +16,16 @@ file_name = sys.argv[1] if len(sys.argv) > 1 else None
 try:
     if not file_name:
         raise FileNotFoundError("Podaj nazwe pliku, z ktorego chcesz wczytac dane, jako argument")
+
+    integration_scheme = int(input("Liczba punktow calkowania w schemacie gaussa (2, 3 lub 4): "))
+    if integration_scheme not in [2, 3, 4]:
+        raise ValueError(f"Prosze wybrac wartosc 2, 3, lub 4")
+
+    integration_data = INTEGRATION_SCHEMES.get(integration_scheme)
+    INTEGRATION_POINTS_2D = integration_data['INTEGRATION_POINTS_2D']
+    WEIGHTS_2D = integration_data['WEIGHTS_2D']
+    INTEGRATION_POINTS_1D = integration_data['INTEGRATION_POINTS_1D']
+    WEIGHTS_1D = integration_data['WEIGHTS_1D']
 
     elements, nodes, field_values = read_file(file_name)
 
