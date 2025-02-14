@@ -13,8 +13,8 @@ sqrt_30 = math.sqrt(30)
 INTEGRATION_SCHEMES = {
     2: {
         "INTEGRATION_POINTS_2D": [
-            (-1 / sqrt_3, -1 / sqrt_3), (1 / sqrt_3, -sqrt_3),
-            (-1 / sqrt_3, sqrt_3), (1 / sqrt_3, 1 / sqrt_3)
+            (-1 / sqrt_3, -1 / sqrt_3), (1 / sqrt_3, -1 / sqrt_3),
+            (-1 / sqrt_3, 1 / sqrt_3), (1 / sqrt_3, 1 / sqrt_3)
         ],
         "WEIGHTS_2D": [[1, 1], [1, 1]],
         "INTEGRATION_POINTS_1D": {
